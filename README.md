@@ -393,6 +393,20 @@ A free, complete cheat sheet of **every acronym in the CompTIA Security+ (SY0-70
 | `WPA` | Wi-Fi Protected Access |
 | `WPS` | Wi-Fi Protected Setup |
 
+## Keeping this accurate
+
+The counts in this README are checked automatically, so the summary table, the
+headline total, and the per-section lists can't quietly drift apart. If you add
+or change an acronym, update the matching count and run the check before opening
+a pull request:
+
+```
+python scripts/check_acronyms.py
+```
+
+It also confirms the PDF is a valid file and that its page count still matches
+what the README says.
+
 ## License
 
 Creative Commons Attribution 4.0 (CC BY 4.0). Share it, print it, post it, remix it. A link back to [SecPlus Mastery](https://secplusmastery.com) is appreciated.
