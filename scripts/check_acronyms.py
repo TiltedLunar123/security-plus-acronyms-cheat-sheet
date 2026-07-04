@@ -101,12 +101,12 @@ def count_pdf_pages(data: bytes) -> int:
     return len(re.findall(rb"/Type\s*/Page(?![s])", data))
 
 
-def check() -> list[str]:
+def check(readme: Path = README, pdf: Path = PDF) -> list[str]:
     problems: list[str] = []
 
-    if not README.exists():
+    if not readme.exists():
         return ["README.md is missing"]
-    text = README.read_text(encoding="utf-8")
+    text = readme.read_text(encoding="utf-8")
     lines = text.splitlines()
 
     topics = parse_topics_table(lines)
@@ -173,10 +173,10 @@ def check() -> list[str]:
         problems.append("README is missing the relative link to the PDF")
 
     # The PDF is real and its page count matches the claim.
-    if not PDF.exists():
+    if not pdf.exists():
         problems.append("the cheat sheet PDF is missing")
     else:
-        data = PDF.read_bytes()
+        data = pdf.read_bytes()
         if not data.startswith(b"%PDF-"):
             problems.append("PDF does not start with a %PDF- header")
         if b"%%EOF" not in data[-2048:]:
