@@ -407,6 +407,15 @@ python scripts/check_acronyms.py
 It also confirms the PDF is a valid file and that its page count still matches
 what the README says.
 
+The checker has its own tests, so if you change how it works you can make sure
+it still catches every kind of drift:
+
+```
+python -m unittest discover -s tests
+```
+
+Both run in CI on every push and pull request.
+
 ## License
 
 Creative Commons Attribution 4.0 (CC BY 4.0). Share it, print it, post it, remix it. A link back to [SecPlus Mastery](https://secplusmastery.com) is appreciated.
