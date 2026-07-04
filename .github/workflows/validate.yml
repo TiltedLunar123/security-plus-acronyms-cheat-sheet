@@ -14,3 +14,5 @@ jobs:
           python-version: "3.11"
       - name: Check cheat sheet integrity
         run: python scripts/check_acronyms.py
+      - name: Run checker tests
+        run: python -m unittest discover -s tests -v
