@@ -216,6 +216,32 @@ class ProblemDetectionTest(unittest.TestCase):
         problems = self._check(pdf_bytes=b"not a pdf at all %%EOF")
         self.assertAnyContains(problems, "does not start with a %PDF- header")
 
+    def test_pdf_missing_eof_trailer(self):
+        # Header is present and the page count matches, but the %%EOF trailer
+        # got truncated off the end. Only the trailer rule should fire.
+        no_eof = make_pdf(2).replace(b"%%EOF", b"")
+        problems = self._check(pdf_bytes=no_eof)
+        self.assertAnyContains(problems, "no %%EOF trailer")
+
+    def test_readme_without_topics_table(self):
+        # Drop the whole Topics summary; the full list still parses.
+        no_topics = VALID_README.replace(
+            "## Topics\n\n"
+            "| Topic | Acronyms |\n"
+            "| --- | ---: |\n"
+            "| Alpha | 2 |\n"
+            "| Beta | 1 |\n\n",
+            "",
+        )
+        problems = self._check(no_topics)
+        self.assertAnyContains(problems, "could not parse the Topics summary table")
+
+    def test_readme_without_sections(self):
+        # Keep the Topics table but cut everything under 'The full list'.
+        no_sections = VALID_README.split("## The full list")[0]
+        problems = self._check(no_sections)
+        self.assertAnyContains(problems, "could not parse any sections")
+
     def test_missing_readme(self):
         import tempfile
 
