@@ -33,9 +33,9 @@ def sort_key(acronym: str) -> str:
     return acronym.lower()
 
 
-def parse_topics_table(lines: list[str]) -> dict[str, int]:
-    """Read the '## Topics' summary table into {topic: claimed_count}."""
-    topics: dict[str, int] = {}
+def topic_rows(lines: list[str]) -> list[tuple[str, int]]:
+    """Every data row in the '## Topics' table, in order, repeats included."""
+    rows: list[tuple[str, int]] = []
     in_table = False
     for line in lines:
         if line.strip() == "## Topics":
@@ -50,13 +50,46 @@ def parse_topics_table(lines: list[str]) -> dict[str, int]:
             topic, count = m.group(1).strip(), int(m.group(2))
             if topic.lower() == "topic":  # header row
                 continue
-            topics[topic] = count
-    return topics
+            rows.append((topic, count))
+    return rows
 
 
-def parse_full_list(lines: list[str]) -> dict[str, list[str]]:
-    """Read the '## The full list' sections into {topic: [acronyms in order]}."""
-    sections: dict[str, list[str]] = {}
+def parse_topics_table(lines: list[str]) -> dict[str, int]:
+    """Read the '## Topics' summary table into {topic: claimed_count}."""
+    return dict(topic_rows(lines))
+
+
+def repeated(names: list[str]) -> list[str]:
+    """Names that show up more than once, in the order they first repeat."""
+    seen: set[str] = set()
+    dupes: list[str] = []
+    for name in names:
+        if name in seen and name not in dupes:
+            dupes.append(name)
+        seen.add(name)
+    return dupes
+
+
+def section_headings(lines: list[str]) -> list[str]:
+    """Every '### ' heading under '## The full list', repeats included."""
+    headings: list[str] = []
+    in_list = False
+    for line in lines:
+        if line.strip() == "## The full list":
+            in_list = True
+            continue
+        if not in_list:
+            continue
+        if line.startswith("## "):
+            break
+        if line.startswith("### "):
+            headings.append(line[4:].strip())
+    return headings
+
+
+def parse_entries(lines: list[str]) -> dict[str, list[tuple[str, str]]]:
+    """Read '## The full list' into {topic: [(acronym, term) in order]}."""
+    sections: dict[str, list[tuple[str, str]]] = {}
     in_list = False
     current: str | None = None
     for line in lines:
@@ -69,7 +102,9 @@ def parse_full_list(lines: list[str]) -> dict[str, list[str]]:
             break
         if line.startswith("### "):
             current = line[4:].strip()
-            sections[current] = []
+            # A repeated heading appends. Starting a fresh list would drop
+            # every row above it and hide the miscount that caused it.
+            sections.setdefault(current, [])
             continue
         if current is None:
             continue
@@ -79,8 +114,16 @@ def parse_full_list(lines: list[str]) -> dict[str, list[str]]:
         acronym = m.group(1).strip()
         if acronym.lower() == "acronym":  # header row
             continue
-        sections[current].append(acronym)
+        sections[current].append((acronym, m.group(2).strip()))
     return sections
+
+
+def parse_full_list(lines: list[str]) -> dict[str, list[str]]:
+    """Read the '## The full list' sections into {topic: [acronyms in order]}."""
+    return {
+        topic: [acronym for acronym, _ in entries]
+        for topic, entries in parse_entries(lines).items()
+    }
 
 
 def parse_claims(text: str) -> dict[str, int]:
@@ -119,6 +162,16 @@ def check(readme: Path = README, pdf: Path = PDF) -> list[str]:
         problems.append("could not parse any sections under 'The full list'")
     if not topics or not sections:
         return problems
+
+    # A topic split across two headings reads as one section here, so the
+    # per-topic count below would be right while the README looks wrong.
+    for dupe in repeated(section_headings(lines)):
+        problems.append(f"section '{dupe}' appears more than once")
+
+    # Only the last row of a repeated topic survives into the dict, so the
+    # earlier one is never compared against anything.
+    for dupe in repeated([topic for topic, _ in topic_rows(lines)]):
+        problems.append(f"topic '{dupe}' has more than one row in the summary table")
 
     # Every topic in the summary has a matching section and vice versa.
     summary_topics = set(topics)
@@ -167,6 +220,22 @@ def check(readme: Path = README, pdf: Path = PDF) -> list[str]:
                         f"(expected '{want}')"
                     )
                     break
+
+    # The same acronym under two topics is usually fine. SoC is System on Chip
+    # and SOC is Security Operations Center, and both earn their spot. It is
+    # only a mistake when the term matches too, which means the row got pasted
+    # into a second section instead of moved.
+    placements: dict[tuple[str, str], tuple[str, list[str]]] = {}
+    for topic, entries in sorted(parse_entries(lines).items()):
+        for acronym, term in entries:
+            key = (sort_key(acronym), term.lower())
+            spelling, topics_seen = placements.setdefault(key, (acronym, []))
+            if topic not in topics_seen:
+                topics_seen.append(topic)
+    for spelling, topics_seen in placements.values():
+        if len(topics_seen) > 1:
+            where = " and ".join(f"'{t}'" for t in topics_seen)
+            problems.append(f"'{spelling}' is in both {where} with the same term")
 
     # The relative download link points at the file that ships.
     if "(./security-plus-acronyms-cheat-sheet.pdf)" not in text:
