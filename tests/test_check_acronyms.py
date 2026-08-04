@@ -223,6 +223,34 @@ class ProblemDetectionTest(unittest.TestCase):
         problems = self._check(pdf_bytes=no_eof)
         self.assertAnyContains(problems, "no %%EOF trailer")
 
+    def test_repeated_section_heading(self):
+        # Alpha shows up twice under 'The full list'. Its second batch of rows
+        # used to replace the first, so the lost rows never got counted.
+        bad = VALID_README.replace(
+            "### Beta\n",
+            "### Alpha\n\n"
+            "| Acronym | Term |\n"
+            "| --- | --- |\n"
+            "| `DDD` | Doubled Down Data |\n\n"
+            "### Beta\n",
+        )
+        problems = self._check(bad)
+        self.assertAnyContains(problems, "section 'Alpha' appears more than once")
+
+    def test_repeated_section_heading_keeps_both_batches(self):
+        # Whatever else fires, the rows under the second heading have to survive
+        # the parse. Losing them is how a miscount slips through.
+        bad = VALID_README.replace(
+            "### Beta\n",
+            "### Alpha\n\n"
+            "| Acronym | Term |\n"
+            "| --- | --- |\n"
+            "| `DDD` | Doubled Down Data |\n\n"
+            "### Beta\n",
+        )
+        sections = ca.parse_full_list(bad.splitlines())
+        self.assertEqual(sections["Alpha"], ["AAA", "BBB", "DDD"])
+
     def test_readme_without_topics_table(self):
         # Drop the whole Topics summary; the full list still parses.
         no_topics = VALID_README.replace(

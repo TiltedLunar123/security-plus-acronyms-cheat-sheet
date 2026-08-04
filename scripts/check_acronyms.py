@@ -54,6 +54,34 @@ def parse_topics_table(lines: list[str]) -> dict[str, int]:
     return topics
 
 
+def repeated(names: list[str]) -> list[str]:
+    """Names that show up more than once, in the order they first repeat."""
+    seen: set[str] = set()
+    dupes: list[str] = []
+    for name in names:
+        if name in seen and name not in dupes:
+            dupes.append(name)
+        seen.add(name)
+    return dupes
+
+
+def section_headings(lines: list[str]) -> list[str]:
+    """Every '### ' heading under '## The full list', repeats included."""
+    headings: list[str] = []
+    in_list = False
+    for line in lines:
+        if line.strip() == "## The full list":
+            in_list = True
+            continue
+        if not in_list:
+            continue
+        if line.startswith("## "):
+            break
+        if line.startswith("### "):
+            headings.append(line[4:].strip())
+    return headings
+
+
 def parse_full_list(lines: list[str]) -> dict[str, list[str]]:
     """Read the '## The full list' sections into {topic: [acronyms in order]}."""
     sections: dict[str, list[str]] = {}
@@ -69,7 +97,9 @@ def parse_full_list(lines: list[str]) -> dict[str, list[str]]:
             break
         if line.startswith("### "):
             current = line[4:].strip()
-            sections[current] = []
+            # A repeated heading appends. Starting a fresh list would drop
+            # every row above it and hide the miscount that caused it.
+            sections.setdefault(current, [])
             continue
         if current is None:
             continue
@@ -119,6 +149,11 @@ def check(readme: Path = README, pdf: Path = PDF) -> list[str]:
         problems.append("could not parse any sections under 'The full list'")
     if not topics or not sections:
         return problems
+
+    # A topic split across two headings reads as one section here, so the
+    # per-topic count below would be right while the README looks wrong.
+    for dupe in repeated(section_headings(lines)):
+        problems.append(f"section '{dupe}' appears more than once")
 
     # Every topic in the summary has a matching section and vice versa.
     summary_topics = set(topics)
