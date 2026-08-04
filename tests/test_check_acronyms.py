@@ -251,6 +251,13 @@ class ProblemDetectionTest(unittest.TestCase):
         sections = ca.parse_full_list(bad.splitlines())
         self.assertEqual(sections["Alpha"], ["AAA", "BBB", "DDD"])
 
+    def test_repeated_topic_row(self):
+        # Two summary rows for Alpha. The second count silently won, so a stale
+        # first row could sit in the table forever without anything complaining.
+        bad = VALID_README.replace("| Beta | 1 |", "| Alpha | 2 |\n| Beta | 1 |")
+        problems = self._check(bad)
+        self.assertAnyContains(problems, "topic 'Alpha' has more than one row")
+
     def test_readme_without_topics_table(self):
         # Drop the whole Topics summary; the full list still parses.
         no_topics = VALID_README.replace(

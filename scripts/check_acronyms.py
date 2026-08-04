@@ -33,9 +33,9 @@ def sort_key(acronym: str) -> str:
     return acronym.lower()
 
 
-def parse_topics_table(lines: list[str]) -> dict[str, int]:
-    """Read the '## Topics' summary table into {topic: claimed_count}."""
-    topics: dict[str, int] = {}
+def topic_rows(lines: list[str]) -> list[tuple[str, int]]:
+    """Every data row in the '## Topics' table, in order, repeats included."""
+    rows: list[tuple[str, int]] = []
     in_table = False
     for line in lines:
         if line.strip() == "## Topics":
@@ -50,8 +50,13 @@ def parse_topics_table(lines: list[str]) -> dict[str, int]:
             topic, count = m.group(1).strip(), int(m.group(2))
             if topic.lower() == "topic":  # header row
                 continue
-            topics[topic] = count
-    return topics
+            rows.append((topic, count))
+    return rows
+
+
+def parse_topics_table(lines: list[str]) -> dict[str, int]:
+    """Read the '## Topics' summary table into {topic: claimed_count}."""
+    return dict(topic_rows(lines))
 
 
 def repeated(names: list[str]) -> list[str]:
@@ -154,6 +159,11 @@ def check(readme: Path = README, pdf: Path = PDF) -> list[str]:
     # per-topic count below would be right while the README looks wrong.
     for dupe in repeated(section_headings(lines)):
         problems.append(f"section '{dupe}' appears more than once")
+
+    # Only the last row of a repeated topic survives into the dict, so the
+    # earlier one is never compared against anything.
+    for dupe in repeated([topic for topic, _ in topic_rows(lines)]):
+        problems.append(f"topic '{dupe}' has more than one row in the summary table")
 
     # Every topic in the summary has a matching section and vice versa.
     summary_topics = set(topics)
