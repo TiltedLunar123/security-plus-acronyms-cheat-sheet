@@ -87,9 +87,9 @@ def section_headings(lines: list[str]) -> list[str]:
     return headings
 
 
-def parse_full_list(lines: list[str]) -> dict[str, list[str]]:
-    """Read the '## The full list' sections into {topic: [acronyms in order]}."""
-    sections: dict[str, list[str]] = {}
+def parse_entries(lines: list[str]) -> dict[str, list[tuple[str, str]]]:
+    """Read '## The full list' into {topic: [(acronym, term) in order]}."""
+    sections: dict[str, list[tuple[str, str]]] = {}
     in_list = False
     current: str | None = None
     for line in lines:
@@ -114,8 +114,16 @@ def parse_full_list(lines: list[str]) -> dict[str, list[str]]:
         acronym = m.group(1).strip()
         if acronym.lower() == "acronym":  # header row
             continue
-        sections[current].append(acronym)
+        sections[current].append((acronym, m.group(2).strip()))
     return sections
+
+
+def parse_full_list(lines: list[str]) -> dict[str, list[str]]:
+    """Read the '## The full list' sections into {topic: [acronyms in order]}."""
+    return {
+        topic: [acronym for acronym, _ in entries]
+        for topic, entries in parse_entries(lines).items()
+    }
 
 
 def parse_claims(text: str) -> dict[str, int]:
@@ -212,6 +220,22 @@ def check(readme: Path = README, pdf: Path = PDF) -> list[str]:
                         f"(expected '{want}')"
                     )
                     break
+
+    # The same acronym under two topics is usually fine. SoC is System on Chip
+    # and SOC is Security Operations Center, and both earn their spot. It is
+    # only a mistake when the term matches too, which means the row got pasted
+    # into a second section instead of moved.
+    placements: dict[tuple[str, str], tuple[str, list[str]]] = {}
+    for topic, entries in sorted(parse_entries(lines).items()):
+        for acronym, term in entries:
+            key = (sort_key(acronym), term.lower())
+            spelling, topics_seen = placements.setdefault(key, (acronym, []))
+            if topic not in topics_seen:
+                topics_seen.append(topic)
+    for spelling, topics_seen in placements.values():
+        if len(topics_seen) > 1:
+            where = " and ".join(f"'{t}'" for t in topics_seen)
+            problems.append(f"'{spelling}' is in both {where} with the same term")
 
     # The relative download link points at the file that ships.
     if "(./security-plus-acronyms-cheat-sheet.pdf)" not in text:

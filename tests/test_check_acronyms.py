@@ -251,6 +251,33 @@ class ProblemDetectionTest(unittest.TestCase):
         sections = ca.parse_full_list(bad.splitlines())
         self.assertEqual(sections["Alpha"], ["AAA", "BBB", "DDD"])
 
+    def _with_extra_beta_row(self, row: str) -> str:
+        """VALID_README plus one more row in Beta, with the counts kept honest."""
+        return (
+            VALID_README.replace("3 acronyms across 2 topics", "4 acronyms across 2 topics")
+            .replace("| Beta | 1 |", "| Beta | 2 |")
+            .replace(
+                "| `CCC` | Command and Control Center |",
+                f"{row}\n| `CCC` | Command and Control Center |",
+            )
+        )
+
+    def test_same_acronym_and_term_in_two_topics(self):
+        # AAA already lives under Alpha. Pasting the identical entry into Beta
+        # is the copy-paste mistake, and every count still adds up.
+        bad = self._with_extra_beta_row(
+            "| `AAA` | Authentication, Authorization, and Accounting |"
+        )
+        problems = self._check(bad)
+        self.assertAnyContains(problems, "'AAA' is in both 'Alpha' and 'Beta'")
+
+    def test_same_acronym_different_term_is_allowed(self):
+        # This is the SoC / SOC case from the real sheet: System on Chip sits
+        # under Endpoint, Security Operations Center under Security Operations.
+        # Same letters, different terms, both correct.
+        ok = self._with_extra_beta_row("| `aaa` | American Automobile Association |")
+        self.assertEqual(self._check(ok), [])
+
     def test_repeated_topic_row(self):
         # Two summary rows for Alpha. The second count silently won, so a stale
         # first row could sit in the table forever without anything complaining.
