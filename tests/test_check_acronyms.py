@@ -312,5 +312,33 @@ class ProblemDetectionTest(unittest.TestCase):
             self.assertEqual(ca.check(readme=missing, pdf=Path(d) / "x.pdf"), ["README.md is missing"])
 
 
+class MainTest(unittest.TestCase):
+    """CI reads the exit code, so both branches of main() need pinning down."""
+
+    def _run_main(self, problems):
+        import contextlib
+        import io
+        from unittest import mock
+
+        out = io.StringIO()
+        with mock.patch.object(ca, "check", return_value=problems):
+            with contextlib.redirect_stdout(out):
+                code = ca.main()
+        return code, out.getvalue()
+
+    def test_main_succeeds_when_nothing_is_wrong(self):
+        code, out = self._run_main([])
+        self.assertEqual(code, 0)
+        self.assertIn("OK", out)
+
+    def test_main_fails_and_lists_every_problem(self):
+        code, out = self._run_main(["first thing", "second thing"])
+        self.assertEqual(code, 1)
+        self.assertIn("FAIL", out)
+        # A summary that swallows problems is as bad as not checking at all.
+        self.assertIn("first thing", out)
+        self.assertIn("second thing", out)
+
+
 if __name__ == "__main__":
     unittest.main()
