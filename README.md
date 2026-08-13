@@ -77,7 +77,7 @@ A free, complete cheat sheet of **every acronym in the CompTIA Security+ (SY0-70
 | `MAC (message)` | Message Authentication Code |
 | `OCSP` | Online Certificate Status Protocol |
 | `OID` | Object Identifier |
-| `PEM` | Privacy Improved Mail |
+| `PEM` | Privacy Enhanced Mail |
 | `PFS` | Perfect Forward Secrecy |
 | `PKCS` | Public Key Cryptography Standards |
 | `PKI` | Public Key Infrastructure |
