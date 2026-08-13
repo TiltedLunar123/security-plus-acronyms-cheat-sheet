@@ -6,6 +6,8 @@ A free, complete cheat sheet of **every acronym in the CompTIA Security+ (SY0-70
 
 3 pages, print-friendly, 302 acronyms across 12 topics. You can also grab it from [secplusmastery.com](https://secplusmastery.com/security-plus-acronyms-cheat-sheet.pdf).
 
+[![Page one of the cheat sheet. A dark header reads CompTIA Security Plus SY0-701 Acronyms Cheat Sheet, every acronym in the official exam objectives, expanded. Two columns of acronyms follow, grouped under Cloud and Virtualization, Cryptography and PKI, Data Protection and Privacy, Email and Messaging, Endpoint Host and Application, and Governance Risk and Compliance, each acronym in bold beside its expansion.](docs/page-1.png)](./security-plus-acronyms-cheat-sheet.pdf)
+
 ## Free study resources
 
 - **Searchable acronyms glossary** (a definition for every term): [secplusmastery.com/glossary](https://secplusmastery.com/glossary)
@@ -75,7 +77,7 @@ A free, complete cheat sheet of **every acronym in the CompTIA Security+ (SY0-70
 | `MAC (message)` | Message Authentication Code |
 | `OCSP` | Online Certificate Status Protocol |
 | `OID` | Object Identifier |
-| `PEM` | Privacy Enhanced Mail |
+| `PEM` | Privacy Improved Mail |
 | `PFS` | Perfect Forward Secrecy |
 | `PKCS` | Public Key Cryptography Standards |
 | `PKI` | Public Key Infrastructure |
